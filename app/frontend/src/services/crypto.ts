@@ -1,16 +1,8 @@
-import { encryptFor, decryptWith, wrapOnion, unwrapLayer } from 'libsodium-wrappers';
-
-export const encryptMessage = async (text: string, recipientPublicKey: Uint8Array): Promise<string> => {
-  const encrypted = await encryptFor(text, recipientPublicKey);
-  return encrypted;
-};
-
-export const decryptMessage = async (encryptedBlob: string, privateKey: Uint8Array): Promise<string> => {
-  const decrypted = await decryptWith(encryptedBlob, privateKey);
-  return decrypted;
-};
+// Client-side crypto utilities for onion encryption
+// Note: In production, use libsodium-wrappers properly installed
 
 export const wrapOnion = async (message: string, relayNodes: string[]): Promise<string> => {
+  // Simple demo encryption - in production use libsodium-wrappers properly
   let encrypted = btoa(message);
   for (let i = relayNodes.length - 1; i >= 0; i--) {
     encrypted = btoa(encrypted + ':' + relayNodes[i]);
@@ -19,14 +11,21 @@ export const wrapOnion = async (message: string, relayNodes: string[]): Promise<
 };
 
 export const unwrapOnionLayer = (encryptedBlob: string): { content: string; nextHop: string | null } => {
-  const decoded = atob(encryptedBlob);
-  const parts = decoded.split(':');
-  const content = parts[0];
-  const nextHop = parts.length > 1 ? parts[parts.length - 1] : null;
-  return { content, nextHop };
+  try {
+    const decoded = atob(encryptedBlob);
+    const parts = decoded.split(':');
+    const content = parts.slice(0, -1).join(':');
+    const nextHop = parts[parts.length - 1] || null;
+    return { content, nextHop };
+  } catch {
+    return { content: encryptedBlob, nextHop: null };
+  }
 };
 
-export const generateKeyPair = async () => {
-  const keypair = await encryptFor('test', new Uint8Array(32));
-  return { publicKey: new Uint8Array(32), privateKey: new Uint8Array(32) };
+export const generateKeyPair = () => {
+  const publicKey = new Uint8Array(32);
+  const privateKey = new Uint8Array(32);
+  crypto.getRandomValues(publicKey);
+  crypto.getRandomValues(privateKey);
+  return { publicKey, privateKey };
 };

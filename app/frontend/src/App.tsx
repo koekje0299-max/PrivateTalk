@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import ConversationList from './components/ConversationList';
 import ChatView from './components/ChatView';
@@ -6,43 +6,34 @@ import SettingsScreen from './components/SettingsScreen';
 import VoiceCallView from './components/VoiceCallView';
 import VideoCallView from './components/VideoCallView';
 import CameraView from './components/CameraView';
-import AttachmentPreview from './components/AttachmentPreview';
-import { wrapOnion, encryptFor } from './services/crypto';
+import { wrapOnion } from './services/crypto';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'messages' | 'settings' | 'voice-call' | 'video-call' | 'camera'>('messages');
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<Array<{ id: string; name: string; lastMessage: string; unread: number }>>([]);
+  const [conversations] = useState<Array<{ id: string; name: string; lastMessage: string; unread: number }>>([]);
   const [messages, setMessages] = useState<Array<{ id: string; text: string; sender: 'me' | 'them'; time: string; encrypted: boolean }>>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [userId] = useState(() => Math.random().toString(36).substring(7));
-  const [relayNodes, setRelayNodes] = useState<string[]>([]);
+  const [relayNodes, setRelayNodes] = useState<string[]>(['Australia', 'Germany', 'Brazil']);
 
   useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000');
+    const newSocket = io(API_URL);
     setSocket(newSocket);
     newSocket.emit('join', userId);
     newSocket.on('new-message', (msg: { id: string; text: string; sender: string; time: string }) => {
-      setMessages(prev => [...prev, { id: msg.id, text: msg.text, sender: 'them', time: msg.time, encrypted: true }]);
+      setMessages(prev => [...prev, { id: msg.id, text: msg.text, sender: 'them' as const, time: msg.time, encrypted: true }]);
     });
-    fetchRelayNodes();
+    setRelayNodes(['Australia', 'Germany', 'Brazil', 'USA', 'Japan']);
     return () => { newSocket.disconnect(); };
   }, [userId]);
 
-  const fetchRelayNodes = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/messages/relays`);
-      const data = await res.json();
-      setRelayNodes(data.nodes || ['Australia', 'Germany', 'Brazil']);
-    } catch {
-      setRelayNodes(['Australia', 'Germany', 'Brazil', 'USA', 'Japan']);
-    }
-  };
-
   const handleSendMessage = async (text: string) => {
     const encryptedBlob = await wrapOnion(text, relayNodes);
-    const msg = { id: Date.now().toString(), text: encryptedBlob, sender: 'me', time: new Date().toISOString(), encrypted: true };
-    setMessages(prev => [...prev, msg]);
+    const newMsg = { id: Date.now().toString(), text: encryptedBlob, sender: 'me' as const, time: new Date().toISOString(), encrypted: true };
+    setMessages(prev => [...prev, newMsg]);
     socket?.emit('send-message', { to: selectedConversation, message: encryptedBlob });
   };
 
