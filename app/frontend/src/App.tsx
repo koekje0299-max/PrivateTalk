@@ -86,6 +86,7 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
   const [view, setView] = useState<'messages' | 'settings'>('messages');
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContactId, setNewContactId] = useState('');
+  const [showMyId, setShowMyId] = useState(false);
 
   useEffect(() => {
     const newSocket = io(API_URL, { auth: { userId } });
@@ -156,7 +157,11 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
       <aside className="w-80 bg-secondary border-r border-gray-700 flex flex-col">
         <header className="p-4 border-b border-gray-700">
           <h1 className="text-xl font-bold text-accent">🔒 PrivateTalk</h1>
-          <p className="text-xs text-gray-400 mt-1">ID: {userId.substring(0, 8)}...</p>
+          <div className="mt-2 p-2 bg-primary rounded-lg" onClick={() => { navigator.clipboard.writeText(userId); alert('ID copied!'); }} title="Click to copy your ID">
+            <p className="text-xs text-gray-400 mb-1">Your Anonymous ID:</p>
+            <p className="text-accent text-xs font-mono break-all cursor-pointer">{userId}</p>
+            <p className="text-xs text-gray-500 mt-1">👆 Tap to copy</p>
+          </div>
         </header>
         
         <button 
