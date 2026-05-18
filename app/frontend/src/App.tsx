@@ -130,16 +130,21 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
   const handleAddContact = async () => {
     if (!newContactId.trim()) return;
     try {
-      await fetch(`${API_URL}/contacts/add`, {
+      const res = await fetch(`${API_URL}/contacts/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, contactId: newContactId.trim() })
       });
-      setNewContactId('');
-      setShowAddContact(false);
-      loadContacts();
+      const data = await res.json();
+      if (data.success) {
+        setNewContactId('');
+        setShowAddContact(false);
+        loadContacts();
+      } else {
+        alert('Failed to add contact. Please check the ID.');
+      }
     } catch {
-      alert('Failed to add contact');
+      alert('Failed to connect to server. Please try again.');
     }
   };
 
