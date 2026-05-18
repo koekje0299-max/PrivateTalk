@@ -268,8 +268,8 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
               className="w-full bg-primary border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-accent mb-4"
             />
             <div className="flex gap-3">
-              <button onClick={() => setShowAddContact(false)} className="flex-1 py-3 rounded-lg bg-gray-700 text-white">Cancel</button>
-              <button onClick={handleAddContact} className="flex-1 py-3 rounded-lg bg-accent text-primary font-bold">Add</button>
+              <button type="button" onClick={() => setShowAddContact(false)} className="flex-1 py-3 rounded-lg bg-gray-700 text-white hover:bg-gray-600">Cancel</button>
+              <button type="button" onClick={handleAddContact} disabled={!newContactId.trim()} className="flex-1 py-3 rounded-lg bg-accent text-primary font-bold hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed">Add</button>
             </div>
           </div>
         </div>
