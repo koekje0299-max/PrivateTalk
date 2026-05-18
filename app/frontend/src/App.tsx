@@ -89,14 +89,14 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
   const [showMyId, setShowMyId] = useState(false);
 
   useEffect(() => {
-    // Keep backend awake - ping every 25 seconds
+    // Keep backend awake - ping every 10 seconds
     const keepAwake = async () => {
       try {
         await fetch(`${API_URL}/health`);
       } catch { /* ignore */ }
     };
     keepAwake();
-    const interval = setInterval(keepAwake, 25000);
+    const interval = setInterval(keepAwake, 10000); // Changed from 25000 to 10000
     return () => clearInterval(interval);
   }, []);
 
@@ -120,13 +120,18 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
   }, [selectedContact]);
 
   const loadContacts = async () => {
-    try {
-      const res = await fetch(`${API_URL}/contacts/${userId}`);
-      const data = await res.json();
-      setContacts(data.contacts || []);
-    } catch {
-      setContacts([]);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(`${API_URL}/contacts/${userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setContacts(data.contacts || []);
+          return;
+        }
+      } catch { /* ignore and retry */ }
+      if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
     }
+    setContacts([]);
   };
 
   const loadMessages = async (contactId: string) => {
@@ -141,23 +146,33 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
 
   const handleAddContact = async () => {
     if (!newContactId.trim()) return;
-    try {
-      const res = await fetch(`${API_URL}/contacts/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, contactId: newContactId.trim() })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setNewContactId('');
-        setShowAddContact(false);
-        loadContacts();
-      } else {
-        alert('Failed to add contact. Please check the ID.');
+    
+    // Try up to 3 times with retry
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(`${API_URL}/contacts/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, contactId: newContactId.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setNewContactId('');
+          setShowAddContact(false);
+          loadContacts();
+          return; // Success - exit function
+        } else {
+          lastError = 'Contact ID not found';
+        }
+      } catch (err) {
+        lastError = `Attempt ${attempt}: Server not responding`;
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before retry
+        }
       }
-    } catch {
-      alert('Failed to connect to server. Please try again.');
     }
+    alert(lastError || 'Failed to add contact. Please try again.');
   };
 
   const handleSend = () => {
