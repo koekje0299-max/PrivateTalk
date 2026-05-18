@@ -89,6 +89,18 @@ const PrivateTalkApp: React.FC<{ userId: string; displayName: string; onLogout: 
   const [showMyId, setShowMyId] = useState(false);
 
   useEffect(() => {
+    // Keep backend awake - ping every 25 seconds
+    const keepAwake = async () => {
+      try {
+        await fetch(`${API_URL}/health`);
+      } catch { /* ignore */ }
+    };
+    keepAwake();
+    const interval = setInterval(keepAwake, 25000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     const newSocket = io(API_URL, { auth: { userId } });
     setSocket(newSocket);
     newSocket.on('new-message', (msg: Message) => {
